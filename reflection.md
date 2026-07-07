@@ -27,6 +27,11 @@
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+    I evolved my original four-class design by adding a PlanEntry object, making the Scheduler read pets directly from the Owner, and storing the generated plan as state so explanation and display don't recompute it.
+
+
+
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs

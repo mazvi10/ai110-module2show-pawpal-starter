@@ -24,18 +24,29 @@ classDiagram
         +mark_complete() None
     }
 
+    class PlanEntry {
+        +Pet pet
+        +Task task
+        +str start_time
+    }
+
     class Scheduler {
+        +Owner owner
         +int time_available
-        +list~Pet~ pet_list
+        +list~PlanEntry~ plan
+        +list~PlanEntry~ skipped
         +sort_by_priority(tasks) list~Task~
         +get_single_pet_tasks(pet) list~Task~
-        +generate_plan() list~Task~
+        +generate_plan() list~PlanEntry~
         +explain_plan() str
         +format_schedule() str
     }
 
     Owner *-- Pet : owns
     Pet *-- Task : has
-    Scheduler ..> Pet : schedules across
+    Scheduler --> Owner : schedules for
+    PlanEntry --> Pet : refers to
+    PlanEntry --> Task : refers to
+    Scheduler *-- PlanEntry : produces
 
-    note for Scheduler "One owner, many pets.\ngenerate_plan() pools tasks from all\npets, sorts by priority, fills until\ntime_available runs out.\nformat_schedule() turns the plan into\nreadable text (CLI + Streamlit)."
+    note for Scheduler "One owner, many pets.\ngenerate_plan() pools tasks from all\npets, sorts by priority, fills until\ntime_available runs out. Stores plan\n(included) and skipped (didn't fit).\nexplain_plan()/format_schedule() read\nthat state instead of recomputing."
