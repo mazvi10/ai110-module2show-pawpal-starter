@@ -5,7 +5,22 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+    
+    Three core actions of adding a pet, setting a task and displaing the day's tasks
 - What classes did you include, and what responsibilities did you assign to each?
+
+    I included Pet, Owner, Task and Scheduler classes.
+    For the Pet class, I included name, animal_type, age and tasks attributes
+    For the Owner class, I included name and pet_list attributes
+    For the Scheduler class, I included time_available and pet_list attributes
+    For the Task class, I included description, due_date, priority and status attributes
+
+    For the Pet class, I included  add_task and delete_task methods
+    For the Owner class, I included add_pet and delete_pet methods
+    For the Scheduler class, I included sort_by_priority, get_single_pet_tasks, explain_plan, generate_plan and format_schedule methods
+    For the Task class, I included a mark_complete method
+
+
 
 **b. Design changes**
 

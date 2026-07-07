@@ -1,0 +1,41 @@
+classDiagram
+    class Owner {
+        +str name
+        +list~Pet~ pet_list
+        +add_pet(pet) None
+        +delete_pet(pet) None
+    }
+
+    class Pet {
+        +str name
+        +str animal_type
+        +int age
+        +list~Task~ tasks
+        +add_task(task) None
+        +delete_task(task) None
+    }
+
+    class Task {
+        +str description
+        +str category
+        +int duration
+        +str priority
+        +str status
+        +mark_complete() None
+    }
+
+    class Scheduler {
+        +int time_available
+        +list~Pet~ pet_list
+        +sort_by_priority(tasks) list~Task~
+        +get_single_pet_tasks(pet) list~Task~
+        +generate_plan() list~Task~
+        +explain_plan() str
+        +format_schedule() str
+    }
+
+    Owner *-- Pet : owns
+    Pet *-- Task : has
+    Scheduler ..> Pet : schedules across
+
+    note for Scheduler "One owner, many pets.\ngenerate_plan() pools tasks from all\npets, sorts by priority, fills until\ntime_available runs out.\nformat_schedule() turns the plan into\nreadable text (CLI + Streamlit)."
