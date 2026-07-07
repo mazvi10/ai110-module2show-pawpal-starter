@@ -1,12 +1,29 @@
 """PawPal+ core system.
 
-Class skeletons generated from diagrams/uml_draft.mmd.
-No scheduling logic yet — just names, attributes, and empty method stubs.
+Implements the four core classes from diagrams/uml_draft.mmd:
+Task, Pet, Owner, and the Scheduler that plans tasks across pets.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
+# Lower rank = more urgent. Unknown priorities sort last.
+PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+# The plan lays tasks out starting from this time of day.
+DAY_START_MINUTES = 8 * 60  # 08:00
+
+
+def _priority_rank(priority: str) -> int:
+    """Map a priority label to a sort rank (lower = more urgent)."""
+    return PRIORITY_RANK.get(priority.lower(), len(PRIORITY_RANK))
+
+
+def _minutes_to_clock(minutes: int) -> str:
+    """Turn a minute-of-day count into an 'HH:MM' string."""
+    hours, mins = divmod(minutes, 60)
+    return f"{hours:02d}:{mins:02d}"
 
 
 @dataclass
@@ -15,13 +32,13 @@ class Task:
 
     description: str
     category: str
-    duration: int  # minutes
+    duration: int  # minutes ("time")
     priority: str
     status: str = "pending"
 
     def mark_complete(self) -> None:
-        """Mark this task as done."""
-        ...
+        """Mark this task as done so it's excluded from future plans."""
+        self.status = "completed"
 
 
 @dataclass
@@ -35,11 +52,12 @@ class Pet:
 
     def add_task(self, task: Task) -> None:
         """Add a task to this pet."""
-        ...
+        self.tasks.append(task)
 
     def delete_task(self, task: Task) -> None:
-        """Remove a task from this pet."""
-        ...
+        """Remove a task from this pet (no error if it isn't present)."""
+        if task in self.tasks:
+            self.tasks.remove(task)
 
 
 @dataclass
@@ -51,11 +69,12 @@ class Owner:
 
     def add_pet(self, pet: Pet) -> None:
         """Add a pet to this owner."""
-        ...
+        self.pet_list.append(pet)
 
     def delete_pet(self, pet: Pet) -> None:
-        """Remove a pet from this owner."""
-        ...
+        """Remove a pet from this owner (no error if it isn't present)."""
+        if pet in self.pet_list:
+            self.pet_list.remove(pet)
 
 
 @dataclass
@@ -65,17 +84,14 @@ class PlanEntry:
 
     pet: Pet
     task: Task
-    start_time: str = ""  # optional, e.g. "08:00"
+    start_time: str = ""  # "HH:MM", assigned for included tasks
 
 
 class Scheduler:
     """Builds a daily plan across all of the owner's pets.
 
-    Not a dataclass: this class is behavior-first (it produces plans),
-    so it's kept as a plain class to separate logic from the data objects.
-
-    Reads the owner's pets directly (single source of truth) and stores
-    the most recent plan on self, so explain/format don't recompute it.
+    Reads the owner's pets directly (single source of truth) and stores the
+    most recent plan on self, so explain/format don't recompute it.
     """
 
     def __init__(self, owner: Owner, time_available: int) -> None:
@@ -86,25 +102,79 @@ class Scheduler:
         self.skipped: list[PlanEntry] = []
 
     def sort_by_priority(self, tasks: list[Task]) -> list[Task]:
-        """Return the given tasks ordered by priority."""
-        ...
+        """Return the tasks ordered by priority (high first). Stable: tasks
+        of equal priority keep their original order."""
+        return sorted(tasks, key=lambda task: _priority_rank(task.priority))
 
     def get_single_pet_tasks(self, pet: Pet) -> list[Task]:
-        """Return the tasks belonging to a single pet."""
-        ...
+        """Return the pending tasks belonging to a single pet, in priority
+        order. Useful for a per-pet view in the UI."""
+        pending = [task for task in pet.tasks if task.status != "completed"]
+        return self.sort_by_priority(pending)
 
     def generate_plan(self) -> list[PlanEntry]:
-        """Pool tasks from all of the owner's pets, sort by priority, and fit
-        within time_available. Stores the result on self.plan (included) and
-        self.skipped (didn't fit), and returns self.plan."""
-        ...
+        """Pool pending tasks from all of the owner's pets, sort by priority,
+        and greedily fit them within time_available. Tasks that fit get a
+        clock start_time; the rest go to self.skipped. Returns self.plan."""
+        # Pool tasks across pets while remembering which pet each belongs to.
+        entries = [
+            PlanEntry(pet=pet, task=task)
+            for pet in self.owner.pet_list
+            for task in pet.tasks
+            if task.status != "completed"
+        ]
+        entries.sort(key=lambda entry: _priority_rank(entry.task.priority))
+
+        self.plan = []
+        self.skipped = []
+        current_time = DAY_START_MINUTES
+        remaining = self.time_available
+
+        for entry in entries:
+            if entry.task.duration <= remaining:
+                entry.start_time = _minutes_to_clock(current_time)
+                current_time += entry.task.duration
+                remaining -= entry.task.duration
+                self.plan.append(entry)
+            else:
+                self.skipped.append(entry)
+
+        return self.plan
 
     def explain_plan(self) -> str:
         """Return human-readable reasoning about which tasks were included or
         skipped and why, based on self.plan and self.skipped."""
-        ...
+        if not self.plan and not self.skipped:
+            return "No tasks to plan — every task is either completed or unset."
+
+        used = sum(entry.task.duration for entry in self.plan)
+        lines = [
+            f"Planned {len(self.plan)} task(s) using {used} of "
+            f"{self.time_available} available minutes."
+        ]
+        for entry in self.plan:
+            lines.append(
+                f"  Included {entry.pet.name}'s {entry.task.description} "
+                f"({entry.task.duration} min, {entry.task.priority} priority)."
+            )
+        for entry in self.skipped:
+            lines.append(
+                f"  Skipped {entry.pet.name}'s {entry.task.description} — "
+                f"not enough time left (needs {entry.task.duration} min)."
+            )
+        return "\n".join(lines)
 
     def format_schedule(self) -> str:
         """Turn self.plan into readable text (usable by both the CLI and the
         Streamlit UI)."""
-        ...
+        if not self.plan:
+            return "Daily plan: (nothing scheduled)"
+
+        lines = [f"Daily plan for {self.owner.name}:"]
+        for entry in self.plan:
+            lines.append(
+                f"  {entry.start_time} — {entry.pet.name}: "
+                f"{entry.task.description} ({entry.task.duration} min) "
+                f"[priority: {entry.task.priority}]"
+            )
+        return "\n".join(lines)
