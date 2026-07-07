@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/mazvitanhidza/ai110/ai110-module2show-pawpal-starter/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/mazvitanhidza/ai110/ai110-module2show-pawpal-starter
+plugins: anyio-4.14.1
+collecting ... collected 2 items
+
+tests/test_pawpal.py::test_mark_complete_changes_status PASSED           [ 50%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [100%]
+
+============================== 2 passed in 0.02s ===============================
