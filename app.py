@@ -140,7 +140,10 @@ else:
         )
         st.success(f"Added '{task_title}' to {target_pet_name}.")
 
-    # Show every pet's tasks.
+    # Show every pet's tasks, sorted the way the scheduler would consider them
+    # (high priority first, then shortest) so the ordering the plan uses is
+    # visible here too. time_available is irrelevant to sorting, so 0 is fine.
+    view_scheduler = Scheduler(owner, 0)
     any_tasks = False
     for pet in owner.pet_list:
         if pet.tasks:
@@ -152,7 +155,7 @@ else:
                      "duration": t.duration, "priority": t.priority,
                      "repeat": t.recurrence or "none",
                      "fixed time": t.preferred_time or "—", "status": t.status}
-                    for t in pet.tasks
+                    for t in view_scheduler.sort_by_priority(pet.tasks)
                 ]
             )
     if not any_tasks:
@@ -173,13 +176,33 @@ if st.button("Generate schedule"):
 
     conflicts = scheduler.detect_conflicts()
     if conflicts:
+        # One prominent, actionable warning. Yellow (st.warning) signals
+        # "needs your attention" without the alarm of an error, and we add a
+        # concrete next step since a double-booking is something the owner can
+        # fix by moving a fixed start time.
         st.warning(
-            "Scheduling conflicts detected:\n\n"
+            "⚠️ You're double-booked — you can only be in one place at a "
+            "time:\n\n"
             + "\n".join(f"- {warning}" for warning in conflicts)
+            + "\n\nMove one task's fixed start time to clear the overlap."
         )
 
     st.markdown("#### Today's Schedule")
-    st.text(scheduler.format_schedule())
+    if scheduler.plan:
+        st.table(
+            [
+                {"start": entry.start_time, "pet": entry.pet.name,
+                 "task": entry.task.description,
+                 "duration (min)": entry.task.duration,
+                 "priority": entry.task.priority}
+                for entry in scheduler.plan
+            ]
+        )
+    else:
+        st.info("Nothing scheduled — add tasks or increase time available.")
 
     st.markdown("#### Why this plan")
-    st.text(scheduler.explain_plan())
+    # Conflicts are already surfaced above, so drop explain_plan's trailing
+    # "Conflicts:" block here to avoid showing the same clash twice.
+    explanation = scheduler.explain_plan().split("\nConflicts:")[0]
+    st.text(explanation)

@@ -116,15 +116,131 @@ tests/test_pawpal.py::test_invalid_fixed_time_falls_back_to_flexible_without_cra
 | Recurring tasks | `Pet.complete_task(task, today)`| arks it done and auto-spawns the next occurrence with `Task.next_occurrence()`, dated `today + RECURRENCE_DELTAS[recurrence]` (daily +1 day, weekly +7). `Task.is_due(today)` keeps future occurrences out of today's plan.
  |
 
+## ✨ Features
+
+- **Priority sorting** — `sort_by_priority()` orders tasks on a two-part key
+  `(priority, duration)`: high → medium → low, then shortest-first to break
+  ties (so more short tasks fit). Unknown priorities sort last. The sort is
+  stable, so fully-tied tasks keep their insertion order.
+
+- **Sorting by time (chronological plan)** — after fitting tasks,
+  `generate_plan()` sorts the final schedule by `start_minutes` so the day
+  reads top-to-bottom in clock order, regardless of the order tasks were picked.
+
+- **Greedy time-budget planning** — `generate_plan()` pools every pet's tasks
+  due today, walks them in priority order, and includes each one that still
+  fits in the remaining minutes; the rest go to a `skipped` list. Tasks are
+  laid out starting at 08:00.
+
+- **Fixed-time appointments** — a task with a `preferred_time` ("HH:MM") is
+  pinned to that time instead of flowing with the greedy cursor. Blank or
+  malformed times are treated as flexible rather than crashing the plan
+  (`_clock_to_minutes` parses leniently).
+
+- **Conflict warnings** — `detect_conflicts()` scans the placed plan and flags
+  any two tasks whose time windows overlap (the owner can't be in two places at
+  once). It only reads already-placed times, so it never crashes; back-to-back
+  tasks that merely touch (e.g. 08:00–08:30 then 08:30) are not flagged.
+
+- **Daily & weekly recurrence** — completing a task via `Pet.complete_task()`
+  marks it done and auto-spawns its next occurrence with
+  `Task.next_occurrence()`, dated `today + 1 day` (daily) or `+ 7 days`
+  (weekly). `timedelta` keeps month/year rollovers correct (Jul 31 → Aug 1).
+  The finished task stays as history; one-shot tasks spawn nothing.
+
+- **Due-date awareness** — `Task.is_due(today)` keeps future recurring
+  occurrences out of today's plan until their date arrives, and drops tasks
+  already completed for the day.
+
+- **Flexible filtering** — `filter_tasks(pet, status, category, due_on)` is the
+  single source of truth for task selection; each argument narrows the view
+  (by pet, status, category, or due date). `get_single_pet_tasks()` wraps it
+  for a per-pet, priority-sorted view.
+
+- **Plan explanation** — `explain_plan()` reports how many minutes were used,
+  which tasks were included, and why others were skipped, so the schedule is
+  transparent rather than a black box.
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+Run `streamlit run app.py`, then follow along:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+1. **Add an owner** (e.g. `Sarah`) — switch between owners from the dropdown.
+2. **Add a pet** (e.g. `Biscuit`, dog, 3); it shows up in the pets table.
+3. **Add tasks** with priority, duration, repeat, and an optional fixed time.
+   Each pet's task table is already **sorted by priority, then shortest first**.
+4. **Set time available and generate** — tasks are fitted into your budget and
+   shown as a table in **chronological order**.
+5. **Review the results** — "Why this plan" lists included/**skipped** tasks,
+   overlapping fixed times raise a **conflict warning**, and completed
+   daily/weekly tasks **recur** on their next due date.
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Main.py results**
+```
+================================================
+Sorting: pending tasks, high-priority & shortest-first
+================================================
+  Give meds (5 min, high priority, meds)
+  Feeding (10 min, high priority, feeding)
+  Morning walk (30 min, high priority, walk)
+  Play time (20 min, medium priority, enrichment)
+  Grooming (40 min, low priority, grooming)
+  ^ Feeding (10 min) sorts before Morning walk (30 min): same
+    priority, shorter duration wins the tie.
+
+================================================
+Filtering: by pet, by status, by category
+================================================
+Milo's pending tasks:
+  Play time (20 min, medium priority, enrichment)
+  Give meds (5 min, high priority, meds)
+
+Completed tasks (excluded from plans):
+  Early potty break (5 min, high priority, walk)
+
+Only 'walk' tasks that are still pending:
+  Morning walk (30 min, high priority, walk)
+
+================================================
+Today's Schedule
+================================================
+Daily plan for Sarah:
+  08:00 — Milo: Give meds (5 min) [priority: high]
+  08:05 — Biscuit: Feeding (10 min) [priority: high]
+  08:15 — Biscuit: Morning walk (30 min) [priority: high]
+  08:45 — Milo: Play time (20 min) [priority: medium]
+
+Why this plan:
+Planned 4 task(s) using 65 of 90 available minutes.
+  Included Milo's Give meds (5 min, high priority).
+  Included Biscuit's Feeding (10 min, high priority).
+  Included Biscuit's Morning walk (30 min, high priority).
+  Included Milo's Play time (20 min, medium priority).
+  Skipped Biscuit's Grooming — not enough time left (needs 40 min).
+
+================================================
+Conflict detection: two tasks at 08:00
+================================================
+Daily plan for Sarah:
+  08:00 — Milo: Give meds (10 min) [priority: high]
+  08:00 — Biscuit: Morning walk (30 min) [priority: high]
+
+⚠ Scheduler found 1 conflict(s):
+  - Milo's Give meds (08:00) overlaps Biscuit's Morning walk (08:00).
+
+================================================
+Recurrence: completing tasks on 2026-07-07
+================================================
+Completed 'Give meds' (daily) -> status now 'completed'.
+  Next 'Give meds' auto-scheduled for 2026-07-08 (was 2026-07-07).
+Completed 'Bath' (weekly) -> status now 'completed'.
+  Next 'Bath' auto-scheduled for 2026-07-14 (was 2026-07-07).
+
+Milo's task list now (completed originals + next occurrences):
+  Give meds: status=completed, due=—
+  Bath: status=completed, due=—
+  Give meds: status=pending, due=2026-07-08
+  Bath: status=pending, due=2026-07-14
+```
+
+

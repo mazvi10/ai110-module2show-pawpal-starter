@@ -1,0 +1,63 @@
+classDiagram
+    class Owner {
+        +str name
+        +list~Pet~ pet_list
+        +add_pet(pet) None
+        +delete_pet(pet) None
+    }
+
+    class Pet {
+        +str name
+        +str animal_type
+        +int age
+        +list~Task~ tasks
+        +add_task(task) None
+        +complete_task(task, today) Task
+        +delete_task(task) None
+    }
+
+    class Task {
+        +str description
+        +str category
+        +int duration
+        +str priority
+        +str status
+        +str recurrence
+        +date due_date
+        +str preferred_time
+        +is_due(today) bool
+        +mark_complete() None
+        +next_occurrence(today) Task
+    }
+
+    class PlanEntry {
+        +Pet pet
+        +Task task
+        +str start_time
+        +int start_minutes
+    }
+
+    class Scheduler {
+        +Owner owner
+        +int time_available
+        +list~PlanEntry~ plan
+        +list~PlanEntry~ skipped
+        +filter_tasks(pet, status, category, due_on) list~Task~
+        +sort_by_priority(tasks) list~Task~
+        +get_single_pet_tasks(pet) list~Task~
+        +generate_plan(today) list~PlanEntry~
+        +detect_conflicts() list~str~
+        +explain_plan() str
+        +format_schedule() str
+    }
+
+    Owner *-- Pet : owns
+    Pet *-- Task : has
+    Scheduler --> Owner : schedules for
+    PlanEntry --> Pet : refers to
+    PlanEntry --> Task : refers to
+    Scheduler *-- PlanEntry : produces
+
+    note for Scheduler "One owner, many pets.\ngenerate_plan() pools tasks due today from\nall pets (filter_tasks), sorts by priority,\nfills until time_available runs out. Stores\nplan (included) and skipped (didn't fit).\ndetect_conflicts() reads the placed plan for\noverlaps. explain_plan()/format_schedule()\nread that state instead of recomputing."
+
+    note for Pet "complete_task() marks a task done and,\nfor a daily/weekly task, calls\nTask.next_occurrence() to add a fresh\ninstance due on its next date - this is\nthe recurrence loop."
