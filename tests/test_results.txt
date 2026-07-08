@@ -3,9 +3,22 @@ platform darwin -- Python 3.12.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/mazvitanh
 cachedir: .pytest_cache
 rootdir: /Users/mazvitanhidza/ai110/ai110-module2show-pawpal-starter
 plugins: anyio-4.14.1
-collecting ... collected 2 items
+collecting ... collected 15 items
 
-tests/test_pawpal.py::test_mark_complete_changes_status PASSED           [ 50%]
-tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [100%]
+tests/test_pawpal.py::test_mark_complete_changes_status PASSED           [  6%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [ 13%]
+tests/test_pawpal.py::test_filter_tasks_excludes_completed_by_default PASSED [ 20%]
+tests/test_pawpal.py::test_filter_tasks_by_category PASSED               [ 26%]
+tests/test_pawpal.py::test_sort_breaks_priority_ties_by_shortest_duration PASSED [ 33%]
+tests/test_pawpal.py::test_completing_daily_task_spawns_next_day_instance PASSED [ 40%]
+tests/test_pawpal.py::test_completing_weekly_task_spawns_seven_days_later PASSED [ 46%]
+tests/test_pawpal.py::test_completing_one_shot_task_spawns_nothing PASSED [ 53%]
+tests/test_pawpal.py::test_spawned_instance_not_due_until_its_date PASSED [ 60%]
+tests/test_pawpal.py::test_generate_plan_includes_due_recurring_task PASSED [ 66%]
+tests/test_pawpal.py::test_generate_plan_orders_entries_chronologically PASSED [ 73%]
+tests/test_pawpal.py::test_detect_conflicts_flags_identical_times PASSED [ 80%]
+tests/test_pawpal.py::test_detect_conflicts_flags_overlapping_fixed_times PASSED [ 86%]
+tests/test_pawpal.py::test_detect_conflicts_empty_when_times_dont_overlap PASSED [ 93%]
+tests/test_pawpal.py::test_invalid_fixed_time_falls_back_to_flexible_without_crashing PASSED [100%]
 
-============================== 2 passed in 0.02s ===============================
+============================== 15 passed in 0.02s ==============================

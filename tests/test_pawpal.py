@@ -142,6 +142,36 @@ def test_generate_plan_includes_due_recurring_task():
     assert [e.task.description for e in scheduler.plan] == ["Meds"]
 
 
+def test_generate_plan_orders_entries_chronologically():
+    """The generated plan lists tasks in ascending start time, regardless of
+    the order they were added or picked."""
+    pet = Pet("Biscuit", "dog", 3)
+    pet.add_task(Task("Walk", "walk", 30, "high", preferred_time="09:00"))
+    pet.add_task(Task("Meds", "meds", 10, "high", preferred_time="08:00"))
+    scheduler = Scheduler(Owner("Sarah", [pet]), 120)
+
+    scheduler.generate_plan(today=date(2026, 7, 7))
+
+    starts = [e.start_time for e in scheduler.plan]
+    assert starts == sorted(starts)  # chronological, earliest first
+    assert starts[0] == "08:00"
+
+
+def test_detect_conflicts_flags_identical_times():
+    """Two tasks pinned to the exact same time clash (one owner, one place)."""
+    dog = Pet("Biscuit", "dog", 3)
+    dog.add_task(Task("Walk", "walk", 30, "high", preferred_time="08:00"))
+    cat = Pet("Milo", "cat", 5)
+    cat.add_task(Task("Meds", "meds", 10, "high", preferred_time="08:00"))
+    scheduler = Scheduler(Owner("Sarah", [dog, cat]), 120)
+    scheduler.generate_plan(today=date(2026, 7, 7))
+
+    conflicts = scheduler.detect_conflicts()
+
+    assert len(conflicts) == 1
+    assert "overlaps" in conflicts[0]
+
+
 def test_detect_conflicts_flags_overlapping_fixed_times():
     """Two fixed-time tasks whose windows overlap produce one warning."""
     dog = Pet("Biscuit", "dog", 3)
