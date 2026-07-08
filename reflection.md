@@ -44,7 +44,11 @@
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+
+    My scheduler sorts according to priority first, thus even a long high priority task can finish up all the required time before lower prority tasks can take place
 - Why is that tradeoff reasonable for this scenario?
+
+    It is reasonable as if the task is very important, indicated by the priority ranking, it will be done for the pet and the more mundane ones can be sacrificed, especially in real life situations e.g. if a pet needs meds and feeding without having time for playing if the pet is sick and the other tasks matter more
 
 ---
 

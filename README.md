@@ -87,10 +87,13 @@ Sample test output:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_priority(tasks)`|  sorts on a two-part key `(priority, duration)`: high→medium→low, then shortest-first to break ties. `generate_plan()` also sorts the final plan by `start_minutes` for chronological order.
+ |
+| Filtering |`Scheduler.filter_tasks(pet, status, category, due_on)` | one helper with optional filters (by pet, status, category, or due date). `get_single_pet_tasks(pet)` wraps it for a single pet |
+| Conflict handling | `Scheduler.detect_conflicts()`|eturns warning strings (never crashes). Two tasks conflict when their time windows overlap (`second.start < first.start + first.duration`), since the owner can't be in two places at once. |
+| Recurring tasks | `Pet.complete_task(task, today)`| arks it done and auto-spawns the next occurrence with `Task.next_occurrence()`, dated `today + RECURRENCE_DELTAS[recurrence]` (daily +1 day, weekly +7). `Task.is_due(today)` keeps future occurrences out of today's plan.
+ |
+
 
 ## 📸 Demo Walkthrough
 
